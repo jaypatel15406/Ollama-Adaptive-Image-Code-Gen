@@ -1,0 +1,8 @@
+{
+    "host": "localhost",
+    "port": 11434,
+    "model_lst": [
+        "llama3.1",
+        "llava"
+    ]
+}

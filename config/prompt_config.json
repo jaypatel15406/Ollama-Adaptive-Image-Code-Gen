@@ -1,0 +1,9 @@
+{
+    "context": "You are an experienced Python Developer. I will provide a scenario, and you need to generate Python code to address the given scenario. Provide only the code, without any explanations or additional text.",
+    "prompts": {
+        "dimension": "Choose the dimension of the shape: '2D' or '3D'. Return only the chosen dimension.",
+        "shape": "Select a basic shape that can be drawn using Python. Examples include circles, squares, triangles, etc. Return only the name of the shape.",
+        "color": "Select a color supported by Python libraries such as Matplotlib, PIL, etc. Return only the name of the color.",
+        "area": "Select the area of the shape to consider: 'Inside' or 'Outside'. Return only the selected area."
+    }
+}
