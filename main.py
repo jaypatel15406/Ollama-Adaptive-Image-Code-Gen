@@ -54,11 +54,11 @@ async def main():
             if response:
                 print(f"Received response: {response}")
         else:
-            logging.error("OLLaMa Service Health Check Failed. Stopping Application due to 'Bad Health' ...")
+            logging.error(" OLLaMa Service Health Check Failed. Stopping Application due to 'Bad Health' ...")
 
     except Exception as exc:
-        logging.error(f"main : Error : {exc}")
-        logging.error(f"main : Traceback : {traceback.format_exc()}")
+        logging.error(f" main : Error : {exc}")
+        logging.error(f" main : Traceback : {traceback.format_exc()}")
 
 # Run the async main function
 if __name__ == '__main__':
