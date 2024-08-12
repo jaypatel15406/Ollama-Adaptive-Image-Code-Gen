@@ -4,5 +4,9 @@
     "model_lst": [
         "llama3.1",
         "llava"
-    ]
+    ],
+    "model_specs": {
+        "role": "user",
+        "stream_flag": true
+    }
 }

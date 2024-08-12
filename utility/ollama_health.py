@@ -45,7 +45,7 @@ async def check_ollama_health():
     ============
         This asynchronous function calls `check_service_running` with default parameters
         to check if the service is running on 'localhost' at port 11434. Based on the
-        result, it prints whether the service is running or not.
+        result, it logs whether the service is running or not.
 
     Returns:
     ============

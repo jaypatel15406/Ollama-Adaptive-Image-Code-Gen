@@ -3,8 +3,8 @@ import ollama
 import logging
 import traceback
 import asyncio
-from utility import ollama_health
-from utility.common_utility import config_dict, prompt_config_dict
+from utility.ollama_health import check_ollama_health
+from utility.common_utility import initiate_image_process, pull_model_instance
 
 async def get_ollama_response():
     '''
@@ -19,15 +19,14 @@ async def get_ollama_response():
     '''
     try:
         logging.info("main : get_ollama_response : Execution Start")
-
-        #TODO Replace this with actual asynchronous operations
-        print('Code Started')
-
-        # Simulate an asynchronous operation if necessary
-        await asyncio.sleep(1)  # Simulate a delay
+        
+        #TODO Commented 'While True' for single instance test
+        # while True
+        #     python_code = await initiate_image_process()
+        python_code = await initiate_image_process()
 
         logging.info("main : get_ollama_response : Execution End")
-        return "response from OLLAMA"  # Placeholder for actual response
+        return python_code  # Placeholder for actual response
 
     except Exception as exc:
         logging.error(f"main : get_ollama_response : Error : {exc}")
@@ -47,9 +46,10 @@ async def main():
     '''
     try:
         # Check whether 'OLLaMa' is serving or not. If it's serving, continue the program; otherwise, log an error
-        health_flag = await ollama_health.check_ollama_health()  # Ensure this function is async
+        health_flag = await check_ollama_health()
 
         if health_flag:
+            await pull_model_instance()
             response = await get_ollama_response()
             if response:
                 print(f"Received response: {response}")
