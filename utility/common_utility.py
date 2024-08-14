@@ -6,6 +6,7 @@ import traceback
 import aiohttp, logging, traceback
 from ollama import AsyncClient, pull
 from distutils.util import strtobool
+from .code_execution_utility import execute_code
 
 #* Initialization of 'config' paths
 config_json_path = "./config/config.json"
@@ -125,9 +126,9 @@ async def get_prompt_context_response(input_specifications= {}, reverification_f
         
         #* Initialization of an 'input_context'
         if reverification_flag:
-            input_context = f"Need to rectify python code: {python_code} because it was not satisfying my criteria which is to draw a {input_specifications['dimension']} {input_specifications['shape']} with a {input_specifications['color']} color {input_specifications['area']} it's boundary area. Please include the necessary libraries and ensure the {input_specifications['shape']} is rendered correctly in {input_specifications['dimension']} with the specified colored area."
+            input_context = f"Need to rectify python code: {python_code} because it was not satisfying my criteria which is to draw a {input_specifications['dimension']} {input_specifications['shape']} with a {input_specifications['color']} color {input_specifications['area']} it's boundary area. Please include the necessary libraries and ensure the {input_specifications['shape']} is rendered correctly in {input_specifications['dimension']} with the specified colored area. Don't forget to save plotted image"
         else:
-            input_context = f"I want to write Python code to draw a {input_specifications['dimension']} {input_specifications['shape']} with a {input_specifications['color']} color {input_specifications['area']} it's boundary area. Please include the necessary libraries and ensure the {input_specifications['shape']} is rendered correctly in {input_specifications['dimension']} with the specified colored area."
+            input_context = f"I want to write Python code to draw a {input_specifications['dimension']} {input_specifications['shape']} with a {input_specifications['color']} color {input_specifications['area']} it's boundary area. Please include the necessary libraries and ensure the {input_specifications['shape']} is rendered correctly in {input_specifications['dimension']} with the specified colored area. Also want to save plotted image as well"
         
         print(f" utility : get_prompt_context_response : Code Generation Prompt : {input_context}")
         print("\n=========================================================================================\n")
@@ -161,10 +162,11 @@ async def code_verification(python_code, prompt_specification_dict):
         verification_flag = verification_flag.replace('.','').replace('!','')
         verification_flag = bool(strtobool(verification_flag))
         
-        #TODO Add Code Execution Logic here, and also take flag of the same for below condition. In case of err fetch the same as well
+        #* Execute Code and take 
+        execution_flag = await execute_code()
         
         #* Need to 'Rectify' code until it get's perfect
-        if verification_flag is False:
+        if verification_flag is False or execution_flag is False:
             print("\n=========================================================================================\n")
             print(f" utility : code_verification : '{oLLaMa_model}' Feedback : Verification Flag : {verification_flag}")
             print(f" utility : code_verification : '{oLLaMa_model}' is regenerating better version of code again ")
