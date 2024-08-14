@@ -1,12 +1,13 @@
 {
     "host": "localhost",
     "port": 11434,
-    "model_lst": [
-        "llama3.1",
-        "llava"
-    ],
+    "llm_model": "llama3.1",
     "model_specs": {
         "role": "user",
         "stream_flag": true
+    },
+    "generated_code_config": {
+        "dir_path": "oLLaMa_generated_code_dir",
+        "file_path": "generated_code.py"
     }
 }

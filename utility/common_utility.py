@@ -1,9 +1,11 @@
 #* Import all the important modules
+import re
 import json
 import logging
 import traceback
 import aiohttp, logging, traceback
 from ollama import AsyncClient, pull
+from distutils.util import strtobool
 
 #* Initialization of 'config' paths
 config_json_path = "./config/config.json"
@@ -14,9 +16,12 @@ with open(config_json_path, 'r') as file_path: config_dict = json.load(file_path
 with open(prompt_config_json_path, 'r') as file_path: prompt_config_dict = json.load(file_path)
 
 #* Unpack configurational values
-LLaMa_model = config_dict['model_lst'][0]
+oLLaMa_model = config_dict['llm_model']
 stream_flag = config_dict['model_specs']['stream_flag']
 user_role = config_dict['model_specs']['role']
+
+#* Initialization of 'Global Variables'
+PYTHON_CODE_RE_PATTERN = re.compile(r'```python\n(.*?)```', re.DOTALL)
 
 async def pull_model_instance():
     """
@@ -38,10 +43,10 @@ async def pull_model_instance():
                 a value, which implicitly means a successful image pull operation.
     """
     try:
-        # Initiates the image pulling process from the LLaMa_model source
-        image_pull_response = pull(LLaMa_model, stream=stream_flag)
+        # Initiates the image pulling process from the oLLaMa_model source
+        image_pull_response = pull(oLLaMa_model, stream=stream_flag)
         progress_states = set()
-        print(f" utility : pull_model_instance : Instansiating '{LLaMa_model}' ... ")
+        print(f" utility : pull_model_instance : Instansiating '{oLLaMa_model}' ... ")
 
         # Iterates through the progress updates of the image pull operation
         for progress in image_pull_response:
@@ -53,7 +58,7 @@ async def pull_model_instance():
             progress_states.add(progress.get("status"))
             
             # Logs the current status of the image pull process
-            print(f" utility : pull_model_instance : '{LLaMa_model}' Model Fetching Status : {progress.get('status')}")
+            print(f" utility : pull_model_instance : '{oLLaMa_model}' Model Fetching Status : {progress.get('status')}")
     
     except aiohttp.ClientError as exe:
         # Logs an error message if an exception occurs during the image pull operation
@@ -84,10 +89,10 @@ async def get_prompt_response(input_prompt= None) -> str:
         print(f" utility : get_prompt_response : Prompt : {input_prompt}")
         
         # Send the prompt to the chat model and get the response
-        chat_response = await AsyncClient().chat(LLaMa_model, messages=[{'role': user_role, 'content': input_prompt}])
+        chat_response = await AsyncClient().chat(oLLaMa_model, messages=[{'role': user_role, 'content': input_prompt}])
         chat_response = chat_response['message']['content'].strip('"')
         
-        print(f" utility : get_prompt_response : Ollama LLaMa 3.1 8B Response : {chat_response}")
+        print(f" utility : get_prompt_response : Ollama's '{oLLaMa_model}' LLM Model Response : {chat_response}")
         print("\n=========================================================================================\n")
         
         logging.info(" utility : get_prompt_response : Execution End")
@@ -98,25 +103,84 @@ async def get_prompt_response(input_prompt= None) -> str:
         logging.error(f" utility : get_prompt_response : Traceback : {traceback.format_exc()}")
         return None
 
-async def get_context_response(input_context= None, input_specifications= {}) -> str:
+async def filter_code_response(chat_response):
     try:
-        logging.info(" utility : get_context_response : Execution Start")
+        logging.info(" utility : filter_code_response : Execution Start")
+        python_code_re_pattern_match = PYTHON_CODE_RE_PATTERN.search(chat_response)
+        if python_code_re_pattern_match:
+            python_code_block = python_code_re_pattern_match.group(1).strip()
+            logging.info(" utility : filter_code_response : Execution End")
+            return python_code_block
+        else:
+            logging.info(" utility : filter_code_response : Execution End")
+            return f" \nNo Code Block Found in {oLLaMa_model} response !\n"
+    except Exception as exc:
+        logging.error(f" utility : filter_code_response : Error : {exc}")
+        logging.error(f" utility : filter_code_response : Traceback : {traceback.format_exc()}")
+        return None
+
+async def get_prompt_context_response(input_specifications= {}, reverification_flag= False, python_code= None) -> str:
+    try:
+        logging.info(" utility : get_prompt_context_response : Execution Start")
         
         #* Initialization of an 'input_context'
-        input_context = f"I want to write Python code to draw a {input_specifications['dimension']} {input_specifications['shape']} with a {input_specifications['color']} color {input_specifications['area']} it's border area. Please include the necessary libraries and ensure the {input_specifications['shape']} is rendered correctly in {input_specifications['dimension']} with the specified border."
-        print(f"input_prompt : {input_context}")
+        if reverification_flag:
+            input_context = f"Need to rectify python code: {python_code} because it was not satisfying my criteria which is to draw a {input_specifications['dimension']} {input_specifications['shape']} with a {input_specifications['color']} color {input_specifications['area']} it's boundary area. Please include the necessary libraries and ensure the {input_specifications['shape']} is rendered correctly in {input_specifications['dimension']} with the specified colored area."
+        else:
+            input_context = f"I want to write Python code to draw a {input_specifications['dimension']} {input_specifications['shape']} with a {input_specifications['color']} color {input_specifications['area']} it's boundary area. Please include the necessary libraries and ensure the {input_specifications['shape']} is rendered correctly in {input_specifications['dimension']} with the specified colored area."
+        
+        print(f" utility : get_prompt_context_response : Code Generation Prompt : {input_context}")
+        print("\n=========================================================================================\n")
+        
+        print(f" utility: get_prompt_context_response: '{oLLaMa_model}' is generating code ...\n Please sit back and enjoy a cup of coffee while it completes its work.")
         
         # Send the prompt to the generate model and get the response
-        chat_response = await AsyncClient().chat(LLaMa_model, messages=[{'role': user_role, 'content': input_context}])
-        print(f"chat_response : {chat_response['message']['content']}")
+        chat_response = await AsyncClient().generate(oLLaMa_model, prompt=input_context)
+        chat_response = chat_response['response']
         
-        logging.info(" utility : get_context_response : Execution End")
-        return "chat_response"
+        print("\n=========================================================================================\n")
+        logging.info(" utility : get_prompt_context_response : Execution End")
+        
+        #* Filter out the 'Python Code' from the 'Generated Response'
+        return await filter_code_response(chat_response)
         
     except Exception as exc:
-        logging.error(f" utility : get_context_response : Error : {exc}")
-        logging.error(f" utility : get_context_response : Traceback : {traceback.format_exc()}")
+        logging.error(f" utility : get_prompt_context_response : Error : {exc}")
+        logging.error(f" utility : get_prompt_context_response : Traceback : {traceback.format_exc()}")
         return None
+
+async def code_verification(python_code, prompt_specification_dict):
+    try:
+        logging.info(" utility : code_verification : Execution Start")
+        print("\n=========================================================================================\n")
+        print(f" utility : code_verification : Feeding code to'{oLLaMa_model}' for the code verification process ...")
+        
+        #* Verify Code is proper or not 'Flag Based' If 'True', then break else return 'modified_python_code_block'
+        verification_prompt = f"Please verify the following Python code: '{python_code}'. Does it meet all the specifications? mentioned - Dimension: {prompt_specification_dict['dimension']}, Shape: {prompt_specification_dict['shape']}, Color: {prompt_specification_dict['color']}. Which were colored {prompt_specification_dict['area']} boundry area of {prompt_specification_dict['shape']}. NOTE: Just return 'True' if the code is perfect and error-free; otherwise, return 'False'. So, return only one word answer."
+        verification_flag = await get_prompt_response(input_prompt=verification_prompt)
+        verification_flag = verification_flag.replace('.','').replace('!','')
+        verification_flag = bool(strtobool(verification_flag))
+        
+        #TODO Add Code Execution Logic here, and also take flag of the same for below condition. In case of err fetch the same as well
+        
+        #* Need to 'Rectify' code until it get's perfect
+        if verification_flag is False:
+            print("\n=========================================================================================\n")
+            print(f" utility : code_verification : '{oLLaMa_model}' Feedback : Verification Flag : {verification_flag}")
+            print(f" utility : code_verification : '{oLLaMa_model}' is regenerating better version of code again ")
+            print("\n=========================================================================================\n")
+            python_code = await get_prompt_context_response(input_specifications=prompt_specification_dict, reverification_flag=True, python_code= python_code)
+            verification_flag = await code_verification(python_code, prompt_specification_dict)
+        
+        print(f" utility : code_verification :  '{oLLaMa_model}' Completed code verification process ...")
+        print("\n=========================================================================================\n")
+        logging.info(" utility : code_verification : Execution End")
+        return verification_flag
+        
+    except Exception as exc:
+        logging.error(f" utility : code_verification : Error : {exc}")
+        logging.error(f" utility : code_verification : Traceback : {traceback.format_exc()}")
+        return False
 
 async def initiate_image_process():
     try:
@@ -128,13 +192,13 @@ async def initiate_image_process():
         for key, _ in prompts.items():
             chat_response = await get_prompt_response(prompts[key])
             prompt_response_dict[key] = chat_response
-        print(f"\n utility : initiate_image_process : prompt_response_dict : {prompt_response_dict}\n")
+        # print(f"\n utility : initiate_image_process : prompt_response_dict : {prompt_response_dict}\n")
         
-        #* Fetch Python Code using 'Main Context'
-        python_code = await get_context_response(input_context= prompt_config_dict['context'], input_specifications= prompt_response_dict)
+        # #* Fetch Python Code using 'Main Context'
+        python_code_block = await get_prompt_context_response(input_specifications= prompt_response_dict)
         
         logging.info(" utility : initiate_image_process : Execution End")
-        return prompt_response_dict
+        return python_code_block, prompt_response_dict
         
     except Exception as exc:
         logging.error(f" utility : initiate_image_process : Error : {exc}")
