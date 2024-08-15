@@ -8,7 +8,7 @@
 
 1. <b>Please refer 'Control Flow Diagram' of Application before moving ahead :point_down:</b>
 
-![OLLaMa Image Adaptive Code Gen WorkFlow](media/OLLaMa%20Image%20Adaptive%20Code%20Gen%20WorkFlow.png)
+![OLLaMa Image Adaptive Code Gen WorkFlow](media/OLLaMa_Image_Adaptive_Code_Gen_WorkFlow.png)
 
 
 2. <b>What Does this application actually do:grey_question:</b>
