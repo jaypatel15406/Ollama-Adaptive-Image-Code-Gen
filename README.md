@@ -88,6 +88,8 @@
 
 1. We can add a new layer of `Image Verification` by integrating the **`LLaVa`** LLM Model. This model can verify the image with respect to its `Contexts` and `Prompts`, which will enhance the `Accuracy` of the current `WorkFlow`.
 
+2. After achieving the results mentioned above, if we obtain satisfactory accuracy, we might integrate `Multiple Shapes` and `Multiple Colors` plotting.
+
 <hr/>
 
 #### To Contribute to the Project:
