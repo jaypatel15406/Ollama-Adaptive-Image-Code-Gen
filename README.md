@@ -11,7 +11,7 @@
 ![OLLaMa Image Adaptive Code Gen WorkFlow](media/OLLaMa_Image_Adaptive_Code_Gen_WorkFlow.png)
 
 
-2. <b>What Does this application actually do:grey_question:</b>
+2. <b>What Does this application actually do :grey_question:</b>
 
     1. First, it initiates the **LLaMa 3.1 8B LLM Model** using `ollama`. You can also change the LLM model if you want to by editing the path `config/config.json` ([For Using Model within `Python Code`]) and `entrypoint.sh` ([For Pulling `ModelFiles`]).
 
