@@ -1,13 +1,37 @@
 {
-    "host": "localhost",
-    "port": 11434,
-    "llm_model": "llama3.1",
-    "model_specs": {
-        "role": "user",
-        "stream_flag": true
+    "ollama": {
+        "host": "localhost",
+        "port": 11434,
+        "llm_model": "llama3.1",
+        "model_specs": {
+            "role": "user",
+            "stream_flag": true
+        },
+        "timeouts": {
+            "health_check": 10,
+            "chat_request": 60,
+            "generate_request": 120,
+            "model_readiness_wait": 20
+        },
+        "retries": {
+            "health_check_max": 30,
+            "health_check_interval": 5,
+            "llm_call_max": 3,
+            "verification_max_attempts": 3
+        }
     },
     "generated_code_config": {
         "dir_path": "oLLaMa_generated_code_dir",
         "file_path": "generated_code.py"
+    },
+    "execution": {
+        "timeout_seconds": 30,
+        "memory_limit_mb": 512,
+        "allowed_modules": ["matplotlib", "PIL", "numpy", "cv2"]
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "file": "logs/app.log"
     }
 }
