@@ -1,19 +1,27 @@
 {
-    "context": "You are an experienced Python Developer. I will provide a scenario, and you need to generate Python code to address the given scenario. Provide only the code, without any explanations or additional text.",
+    "context": "You are a Python developer specializing in creating simple, executable image generation code. Your code must be complete, runnable, and use standard libraries like matplotlib or PIL.",
     "system_instructions": {
         "code_format": "python",
         "must_include_imports": true,
         "must_save_image": true,
-        "forbidden_patterns": ["input(", "open(", "subprocess", "exec", "eval"]
+        "forbidden_patterns": ["input(", "open(", "subprocess", "exec", "eval"],
+        "required_patterns": ["import", "plt.show()", "plt.savefig()", "save()"]
     },
     "prompts": {
-        "dimension": "Choose the dimension of the shape: '2D' or '3D'. NOTE: Return only the chosen dimension.",
-        "shape": "Select a basic shape that can be drawn using Python. Examples include circles, squares, triangles, etc. NOTE: Return only the name of the shape. Don't want: '**Shape Name:** Shape_name' Response",
-        "color": "Select a color supported by Python libraries such as Matplotlib, PIL, etc. NOTE: Supported by Python libraries and Return only the name of the color. without any explanation, Just want Color Name",
-        "area": "Randomly choose an area to color for the shape: either 'Inside' or 'Outside'. NOTE: Return either 'Inside' or 'Outside' without any explanation"
+        "dimension": "Choose ONLY ONE: '2D' or '3D'. For simple geometric shapes, always choose '2D'. Return just the word 2D or 3D, nothing else.",
+        "shape": "Choose ONE basic geometric shape from this list ONLY: circle, square, triangle, rectangle, pentagon, hexagon. Return just the shape name, lowercase, nothing else.",
+        "color": "Choose ONE color from this list ONLY: red, blue, green, yellow, orange, purple, pink, black. Return just the color name, lowercase, nothing else.",
+        "area": "Choose ONLY ONE: 'Inside' or 'Outside'. For filled shapes, choose 'Inside'. Return just the word, nothing else."
     },
     "verification": {
-        "prompt_template": "Please verify the following Python code: '{code}'. Does it meet all the specifications? mentioned - Dimension: {dimension}, Shape: {shape}, Color: {color}. Which were colored {area} boundry area of {shape}. NOTE: Just return 'True' if the code is perfect and error-free; otherwise, return 'False'. So, return only one word answer.",
-        "rectification_template": "Need to rectify python code: {code} because it was not satisfying my criteria which is to draw a {dimension} {shape} with a {color} color {area} it's boundary area. Please include the necessary libraries and ensure the {shape} is rendered correctly in {dimension} with the specified colored area. Don't forget to save plotted image"
+        "prompt_template": "Check this Python code: Does it draw a {dimension} {shape} with {color} color filled {area}? The code must: 1) Import libraries 2) Create the shape 3) Fill with color 4) Save the image. Reply ONLY 'True' if all conditions met, otherwise 'False'.",
+        "rectification_template": "Fix this Python code to properly draw a {dimension} {shape} with {color} color filled {area}. The code must: 1) Import matplotlib or PIL 2) Create the shape correctly 3) Fill with {color} color 4) Save as image file. Provide complete working code in ```python ``` blocks."
+    },
+    "code_generation": {
+        "initial_prompt_template": "Write Python code to draw a {dimension} {shape} with {color} color filled {area}. Requirements: 1) Use matplotlib.pyplot 2) Create the shape with correct dimensions 3) Fill {area} with {color} 4) Add grid and labels 5) Save as 'output.png' using plt.savefig() 6) Include plt.show() 7) Make it complete and runnable. Provide code in ```python ``` blocks.",
+        "examples": {
+            "circle": "import matplotlib.pyplot as plt\nimport numpy as np\n\nfig, ax = plt.subplots(figsize=(6, 6))\ncircle = plt.Circle((0.5, 0.5), 0.3, color='blue', fill=True)\nax.add_patch(circle)\nax.set_xlim(0, 1)\nax.set_ylim(0, 1)\nax.set_aspect('equal')\nplt.savefig('output.png')\nplt.show()",
+            "square": "import matplotlib.pyplot as plt\n\nfig, ax = plt.subplots(figsize=(6, 6))\nsquare = plt.Rectangle((0.2, 0.2), 0.6, 0.6, color='red', fill=True)\nax.add_patch(square)\nax.set_xlim(0, 1)\nax.set_ylim(0, 1)\nax.set_aspect('equal')\nplt.savefig('output.png')\nplt.show()"
+        }
     }
 }

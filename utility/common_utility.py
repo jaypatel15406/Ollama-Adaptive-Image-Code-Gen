@@ -14,6 +14,7 @@ import json
 import logging
 import traceback
 import asyncio
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import aiohttp
@@ -170,14 +171,14 @@ async def get_prompt_context_response(
         Optional[str]: Generated Python code block, or None if an error occurs.
     """
     config = get_config()
-    oLLaMa_model = config.get('ollama.llm_model', 'llama3.1')
+    oLLaMa_model = config.get('ollama.llm_model', 'qwen2.5:0.5b')
     timeout = config.get('ollama.timeouts.generate_request', 120)
     
-    verification_config = config.get('verification', {})
-    rectification_template = verification_config.get(
-        'rectification_template',
-        "Need to rectify python code: {code} because it was not satisfying my criteria which is to draw a {dimension} {shape} with a {color} color {area} it's boundary area. Please include the necessary libraries and ensure the {shape} is rendered correctly in {dimension} with the specified colored area. Don't forget to save plotted image"
-    )
+    prompt_config_path = Path(__file__).parent.parent / 'config' / 'prompt_config.json'
+    prompt_config = _load_prompt_config(str(prompt_config_path))
+    
+    verification_config = prompt_config.get('verification', {})
+    code_gen_config = prompt_config.get('code_generation', {})
     
     try:
         logger.info("get_prompt_context_response : Execution Start")
@@ -188,22 +189,29 @@ async def get_prompt_context_response(
         area = input_specifications.get('area', 'Inside')
         
         if reverification_flag and python_code:
-            input_context = rectification_template.format(
-                code=python_code,
+            # Use rectification template
+            input_context = verification_config.get(
+                'rectification_template',
+                "Fix this Python code to properly draw a {dimension} {shape} with {color} color filled {area}. The code must: 1) Import matplotlib or PIL 2) Create the shape correctly 3) Fill with {color} color 4) Save as image file. Provide complete working code in ```python ``` blocks."
+            ).format(code=python_code, dimension=dimension, shape=shape, color=color, area=area)
+            
+            logger.warning(f"get_prompt_context_response : Rectifying code - attempt triggered")
+        else:
+            # Use enhanced initial prompt with examples
+            initial_template = code_gen_config.get(
+                'initial_prompt_template',
+                "Write Python code to draw a {dimension} {shape} with {color} color filled {area}. Requirements: 1) Use matplotlib.pyplot 2) Create the shape with correct dimensions 3) Fill {area} with {color} 4) Add grid and labels 5) Save as 'output.png' using plt.savefig() 6) Include plt.show() 7) Make it complete and runnable. Provide code in ```python ``` blocks."
+            )
+            input_context = initial_template.format(
                 dimension=dimension,
                 shape=shape,
                 color=color,
                 area=area
             )
-        else:
-            input_context = (
-                f"I want to write Python code to draw a {dimension} {shape} with a {color} color "
-                f"{area} it's boundary area. Please include the necessary libraries and ensure the "
-                f"{shape} is rendered correctly in {dimension} with the specified colored area. "
-                f"Also want to save plotted image as well"
-            )
+            
+            logger.info(f"get_prompt_context_response : Generating code for {dimension} {shape} in {color}")
         
-        logger.debug(f"get_prompt_context_response : Code Generation Prompt : {input_context}")
+        logger.debug(f"get_prompt_context_response : Prompt : {input_context}")
         logger.info(f"get_prompt_context_response: '{oLLaMa_model}' is generating code...")
         
         chat_response = await AsyncClient().generate(oLLaMa_model, prompt=input_context)
@@ -244,14 +252,12 @@ async def code_verification(
         bool: True if code passes verification and execution, False otherwise.
     """
     config = get_config()
-    oLLaMa_model = config.get('ollama.llm_model', 'llama3.1')
+    oLLaMa_model = config.get('ollama.llm_model', 'qwen2.5:0.5b')
     max_attempts = config.get('ollama.retries.verification_max_attempts', 3)
     
-    verification_config = config.get('verification', {})
-    prompt_template = verification_config.get(
-        'prompt_template',
-        "Please verify the following Python code: '{code}'. Does it meet all the specifications? mentioned - Dimension: {dimension}, Shape: {shape}, Color: {color}. Which were colored {area} boundry area of {shape}. NOTE: Just return 'True' if the code is perfect and error-free; otherwise, return 'False'. So, return only one word answer."
-    )
+    prompt_config_path = Path(__file__).parent.parent / 'config' / 'prompt_config.json'
+    prompt_config = _load_prompt_config(str(prompt_config_path))
+    verification_config = prompt_config.get('verification', {})
     
     try:
         logger.info("code_verification : Execution Start")
@@ -260,20 +266,18 @@ async def code_verification(
             logger.error(f"code_verification : Max attempts ({max_attempts}) reached. Stopping verification.")
             return False
         
-        logger.info(f"code_verification : Feeding code to '{oLLaMa_model}' for verification...")
+        logger.info(f"code_verification : Verifying code (attempt {current_attempt}/{max_attempts})...")
         
         dimension = prompt_specification_dict.get('dimension', '2D')
         shape = prompt_specification_dict.get('shape', 'circle')
         color = prompt_specification_dict.get('color', 'blue')
         area = prompt_specification_dict.get('area', 'Inside')
         
-        verification_prompt = prompt_template.format(
-            code=python_code,
-            dimension=dimension,
-            shape=shape,
-            color=color,
-            area=area
-        )
+        # Use enhanced verification prompt
+        verification_prompt = verification_config.get(
+            'prompt_template',
+            "Check this Python code: Does it draw a {dimension} {shape} with {color} color filled {area}? The code must: 1) Import libraries 2) Create the shape 3) Fill with color 4) Save the image. Reply ONLY 'True' if all conditions met, otherwise 'False'."
+        ).format(dimension=dimension, shape=shape, color=color, area=area)
         
         verification_response = await get_prompt_response(input_prompt=verification_prompt)
         
@@ -281,14 +285,14 @@ async def code_verification(
             logger.warning("code_verification : No verification response received")
             verification_flag = False
         else:
-            verification_response = verification_response.replace('.', '').replace('!', '').strip()
+            verification_response = verification_response.replace('.', '').replace('!', '').strip().lower()
             verification_flag = _strtobool(verification_response)
+            logger.debug(f"code_verification : Verification response: {verification_response} -> {verification_flag}")
         
         execution_flag = await execute_code()
         
         if verification_flag is False or execution_flag is False:
-            logger.warning(f"code_verification : '{oLLaMa_model}' Feedback : Verification Flag : {verification_flag}")
-            logger.info(f"code_verification : '{oLLaMa_model}' is regenerating better version of code again")
+            logger.warning(f"code_verification : Verification={verification_flag}, Execution={execution_flag} - triggering rectification")
             
             python_code = await get_prompt_context_response(
                 input_specifications=prompt_specification_dict,
@@ -306,7 +310,7 @@ async def code_verification(
                 current_attempt + 1
             )
         
-        logger.info(f"code_verification : '{oLLaMa_model}' Completed code verification process")
+        logger.info(f"code_verification : Completed - Result: {verification_flag}")
         logger.info("code_verification : Execution End")
         return verification_flag
         
